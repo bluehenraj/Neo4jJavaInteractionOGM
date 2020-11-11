@@ -38,7 +38,9 @@ public class Person {
     /**
      * Constructor
      */
-    public Person() {}
+    public Person() {
+    	
+    }
 
     /**
      * Constructor
@@ -77,24 +79,5 @@ public class Person {
         }
 
         return children;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-
-        Person person = (Person) o;
-
-        if (birthYear != person.birthYear) return false;
-        return name != null ? name.equals(person.name) : person.name == null;
-
-    }
-
-    @Override
-    public int hashCode() {
-        int result = birthYear;
-        result = 31 * result + (name != null ? name.hashCode() : 0);
-        return result;
     }
 }
