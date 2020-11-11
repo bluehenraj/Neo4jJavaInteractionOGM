@@ -1,11 +1,6 @@
-/*
- * Copyright (c) 2018  Scott C. Sosna  ALL RIGHTS RESERVED
- */
-
 package com.buddhadata.sandbox.neo4j.ogm.intro;
 
 import com.buddhadata.sandbox.neo4j.ogm.intro.node.Person;
-import com.buddhadata.sandbox.neo4j.ogm.intro.relationship.Married;
 import org.neo4j.ogm.config.Configuration;
 import org.neo4j.ogm.cypher.BooleanOperator;
 import org.neo4j.ogm.cypher.ComparisonOperator;
@@ -24,6 +19,7 @@ import java.util.Map;
 
 /**
  * OGM Intro for loading data
+ * Demonstrates communication between Eclipse and Neo4j database by implementing CRUD operations 
  */
 public class Loader {
 
@@ -36,7 +32,7 @@ public class Loader {
     static private final String SERVER_URI = "bolt://54.90.28.212:32813";
     static private final String SERVER_USERNAME = "neo4j";
     static private final String SERVER_PASSWORD = "shields-letterhead-passivations";
-
+    int countPeople = 12;
 
     /**
      * Constructor
@@ -59,7 +55,7 @@ public class Loader {
     }
 
     /**
-     * Method for doing work≥
+     * Method for doing work
      */
     private void process () {
         //  For demo purposes, create session and purge to cleanup whatever you have
@@ -69,28 +65,24 @@ public class Loader {
         //  Load the data via OGM
         load (session);
 
-        //  OGM Filter, querying by birth year
-        System.out.println ("Querying nodes by single OGM filter");
-        queryByFilter (1977, session).forEach (one -> System.out.println (one.getName() + " was born in " + one.getBirthYear()));
+        System.out.println();
+        Collection<Person> people = new Loader().readPeople(session);
 
-        //  OGM multi-part filter, querying by birth year or name greater than the given letter.
-        System.out.println ("Querying nodes by multiple OGM filters.");
-        queryByMultipleFilters(1977, "M", session).forEach (one -> System.out.println (one.getName() + " was born in " + one.getBirthYear()));
-
-        //  OGM query using Cypher, finding those married to the name passed in.
-        System.out.println ("Querying nodes using a Cypher statement.");
-        queryByCypher("Michael Blevins", session).forEach (one -> System.out.println (one.getName() + " at some point was married to Michael Blevins"));
+        // Prints out existing people from Neo4j
+        printPeople(people);
     }
 
 
     /**
      * Load the data.
+     * This is kind of method where an Object(Person) from Eclipse is written to Neo4j Database 
      */
     private void load (Session session) {
 
         //  All work done in single transaction.
         Transaction txn = session.beginTransaction();
 
+        //  Following Person Objects will be what we will see in Neo4j database initially 
         //  Create all persons.
         Person Carol = new Person ("Carol Maureen", 1945);
         Person Courtney = new Person ("Courtney Janice", 1945);
@@ -106,6 +98,8 @@ public class Loader {
         Person Zane = new Person ("Michael Zane", 1973);
 
         //  Add children to each parent.
+        //  There is-a relationship between a parent(Person) and their children(List-of-Person)
+        //  We have defined this relationship in a Person class with an attribute that has @Relationship annotation on it
         List<Person> children = Carol.getChildren();
         children.add (Scott);
         children.add (Courtney);
@@ -127,8 +121,10 @@ public class Loader {
         children.add (Gabe);
         children.add (Esme);
 
-
         //  Save to database
+        // Upon invocation of save() with an entity, it checks the given object graph for changes compared with the data that was 
+        // loaded from the database.
+        // If there is a difference, it saves the most recent change that happened
         session.save (Carol);
         session.save (Courtney);
         session.save (Esme);
@@ -141,70 +137,105 @@ public class Loader {
         session.save (Scott);
         session.save (Steve);
         session.save (Zane);
-
-        //  Create all marriages and save to database
-        session.save (new Married(Carol, Mike, 1964, 1973));
-        session.save (new Married(Gail, Mike, 1973, 1992));
-        session.save (new Married(Carol, Steve, 1976, null));
-
+/*
+        // UPDATE operation can be shown here
+        updatePerson(Carol,"Raj Trivedi",session);
+*/        
         //  Commit the transaction.
         txn.commit();
     }
 
-    /**
-     * Example of querying using an OGM filter.
-     * @param birthYear a person's birth year
-     * @param session Neo4J session
-     * @return collection of zero or more persons returned by the filter
+    /***
+     * CREATE operation
+     * @param p Person to be created in Neo4j database
+     * @param session
      */
-    private Iterable<Person> queryByFilter (int birthYear,
-                                            Session session) {
-
-        //  Create an OGM filter for the birthYear property.
-        Filter filter = new Filter ("birthYear", ComparisonOperator.EQUALS, birthYear);
-
-        //  Load all Persons with the given birth year.
-        return session.loadAll (Person.class, filter);
+    private void createPerson(Person p, Session session) {
+        // CREATE operation can be performed by:
+        //   1. Creating a new instance of Person
+        //   2. Calling save() method to save that instance in Neo4j database 
+    	
+    	System.out.println("New Person created: " + p.getName() + " with a birth year of " + p.getBirthYear());
+    	System.out.println();
+    	session.save(p);
+    	countPeople++;
+    }
+    
+    /***
+     * UPDATE operation by Person's name 
+     * @param p Person to be updated on the basis of name in Neo4j database
+     * @param session
+     */
+    private void updatePerson(Person p, String name, Session session) {
+    	System.out.println("Person updated from: " + p.getName() + " with a birth year of " + p.getBirthYear());
+    	p.setName(name);
+    	System.out.println("Person updated to: " + p.getName() + " with a birth year of " + p.getBirthYear());
+    	System.out.println();
+    	session.save(p);
     }
 
-    /**
-     * Create a composite filter for querying Neo4J via OGM
-     * @param birthYear a person's birth year
-     * @param startingLetter the letter for which a person's name is greater than
-     * @param session Neo4J session
-     * @return collection of zero or more persons returned by the filters
+    /***
+     * UPDATE operation by Person's birth year
+     * @param p Person to be updated on the basis of birth year in Neo4j database
+     * @param session
      */
-    private Iterable<Person> queryByMultipleFilters (int birthYear,
-                                                     String startingLetter,
-                                                     Session session) {
-
-        //  Filter either by the birth year or name greater than the starting letter
-        Filters composite = new Filters();
-        Filter filter = new Filter ("birthYear", ComparisonOperator.EQUALS, birthYear);
-        composite.add(filter);
-        filter = new Filter ("name", ComparisonOperator.GREATER_THAN, startingLetter);
-        filter.setBooleanOperator(BooleanOperator.OR);
-        composite.add(filter);
-
-        //  Load all Persons which match the composite filter.
-        return session.loadAll (Person.class, composite);
+    private void updatePerson(Person p, int birthYear, Session session) {
+    	System.out.println("Person updated from: " + p.getName() + " with a birth year of " + p.getBirthYear());
+    	p.setBirthYear(birthYear);
+    	System.out.println("Person updated to: " + p.getName() + " with a birth year of " + p.getBirthYear());
+    	System.out.println();
+    	session.save(p);
     }
 
-    /**
-     * Query Neo4J by providing a Cypher statement and parameters to plug in
-     * @param marriedTo the destination node of the MARRIED relationship
-     * @param session the Neo4J session
-     * @return who's married to the name specified
+    /***
+     * UPDATE operation by Person
+     * @param p Person to be updated on the basis of both name and birth year in Neo4j database
+     * @param session
      */
-    private Iterable<Person> queryByCypher (String marriedTo,
-                                            Session session) {
-
-        //  Create/load a map to hold the parameter
-        Map<String, Object> params = new HashMap<>(1);
-        params.put ("name", marriedTo);
-
-        //  Execute query and return the other side of the married relationship
-        String cypher = "MATCH (w:Person)-[:MARRIED]->(h:Person {name:$name}) RETURN w";
-        return session.query (Person.class, cypher, params);
+    private void updatePerson(Person p, String name, int birthYear, Session session) {
+    	System.out.println("Person updated from: " + p.getName() + " with a birth year of " + p.getBirthYear());
+    	p.setName(name);
+    	p.setBirthYear(birthYear);
+    	System.out.println("Person updated to: " + p.getName() + " with a birth year of " + p.getBirthYear());
+    	System.out.println();
+    	session.save(p);
     }
+
+
+    /***
+     * DELETE operation
+     * @param p Person to be deleted from Neo4j database
+     * @param session
+     */
+    private void deletePerson(Person p, Session session) {
+        // DELETE operation can be performed upon invocation of delete() with an entity
+        // It basically destroys that node from the Neo4j database
+    	
+    	System.out.println("Person deleted: " + p.getName() + " with a birth year of " + p.getBirthYear());
+    	System.out.println();
+    	session.delete(p);
+    	countPeople--;
+    }
+
+    /** READ operation without query
+     *  Reads all people from Neo4j database
+     * @return collection of Person from Neo4j database
+     */
+    private Collection<Person> readPeople (Session session) {
+    	return session.loadAll(Person.class);
+    }
+    
+    /***
+     * 
+     * @param people Collection of Person Objects
+     */
+    private void printPeople(Collection<Person> people) {
+        System.out.println("Printing out existing people in Neo4j database...");
+        System.out.println();
+        people.forEach (one -> System.out.println (one.getName() + " with a birth year " + one.getBirthYear()));
+        System.out.println();
+        System.out.println("Total People: " + countPeople);
+        System.out.println();
+    }
+    
 }
