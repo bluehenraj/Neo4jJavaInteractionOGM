@@ -33,9 +33,9 @@ public class Loader {
     private final SessionFactory sessionFactory;
 
     //  Configuration info for connecting to the Neo4J database
-    static private final String SERVER_URI = "bolt://localhost";
+    static private final String SERVER_URI = "bolt://52.201.184.95:33664";
     static private final String SERVER_USERNAME = "neo4j";
-    static private final String SERVER_PASSWORD = "password";
+    static private final String SERVER_PASSWORD = "dockings-module-services";
 
 
     /**
