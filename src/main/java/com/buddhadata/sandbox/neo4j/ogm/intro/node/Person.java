@@ -1,10 +1,8 @@
-/*
- * Copyright (c) 2018  Scott C. Sosna  ALL RIGHTS RESERVED
- */
-
 package com.buddhadata.sandbox.neo4j.ogm.intro.node;
 
+
 import org.neo4j.ogm.annotation.GeneratedValue;
+
 import org.neo4j.ogm.annotation.Id;
 import org.neo4j.ogm.annotation.NodeEntity;
 import org.neo4j.ogm.annotation.Relationship;
